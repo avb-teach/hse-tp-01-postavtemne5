@@ -10,48 +10,48 @@ def make_unique_name(target_dir, original_name):
     result_name = original_name
     
     while os.path.exists(os.path.join(target_dir, result_name)):
-        result_name = name_part + str(number) + extension
+        if extension:
+            result_name = f"{name_part}_{number}{extension}"
+        else:
+            result_name = f"{name_part}_{number}"
         number += 1
     
     return result_name
 
 def gather_files(source, destination, depth_limit=None):
     if not os.path.isdir(source):
-        sys.stderr.write("Error: Source directory missing: " + source + "\n")
+        sys.stderr.write(f"Error: Source directory missing: {source}\n")
         return False
     
     os.makedirs(destination, exist_ok=True)
     
-    for current_dir, _, files in os.walk(source):
-        depth = current_dir[len(os.path.abspath(source)):].count(os.sep)
+    for root, _, files in os.walk(source):
+        current_depth = root[len(os.path.abspath(source)):].count(os.sep)
         
-        if depth_limit is not None and depth > depth_limit:
+        if depth_limit is not None and current_depth > depth_limit:
             continue
         
         for file in files:
-            src = os.path.join(current_dir, file)
+            src_path = os.path.join(root, file)
             dst_name = make_unique_name(destination, file)
-            dst = os.path.join(destination, dst_name)
+            dst_path = os.path.join(destination, dst_name)
             
             try:
-                shutil.copy2(src, dst)
+                shutil.copy2(src_path, dst_path)
             except Exception as e:
-                sys.stderr.write("Copy failed for " + src + ": " + str(e) + "\n")
+                sys.stderr.write(f"Copy failed for {src_path}: {str(e)}\n")
     
     return True
 
-def get_args():
+def main():
     parser = ArgumentParser()
-    parser.add_argument('source')
-    parser.add_argument('destination')
-    parser.add_argument('--max-depth', type=int)
-    return parser.parse_args()
-
-def execute():
-    params = get_args()
+    parser.add_argument('source', help="Input directory")
+    parser.add_argument('destination', help="Output directory")
+    parser.add_argument('--max-depth', type=int, help="Maximum depth level")
+    args = parser.parse_args()
     
-    if not gather_files(params.source, params.destination, params.max_depth):
+    if not gather_files(args.source, args.destination, args.max_depth):
         sys.exit(1)
 
-if name == 'main':
-    execute()
+if __name__ == '__main__':
+    main()
